@@ -1,6 +1,8 @@
-from rank_bm25 import BM25Okapi
-import numpy as np
 import re
+
+import numpy as np
+from rank_bm25 import BM25Okapi
+
 
 class HybridRetriever:
     def __init__(self, chroma_collection):
@@ -20,16 +22,14 @@ class HybridRetriever:
         self.doc_index = {doc: i for i, doc in enumerate(self.documents)}
 
     def hybrid_search(self, query: str, alpha: float = 0.5, top_k: int = 10, service_filter=None):
-
         vector_top_k = 30
         bm25_top_k = 30
 
-        #print(f"Total records: ------>>> {self.collection.count()}")
         # --- Vector search ---
         vector_results = self.collection.query(
             query_texts=[query],
             n_results=vector_top_k,
-            where={"service": service_filter}
+            where={"service": service_filter},
         )
 
         vector_docs = vector_results["documents"][0]
@@ -54,16 +54,16 @@ class HybridRetriever:
                 vec_score = vector_scores[vector_docs.index(doc)]
 
             bm_score = bm25_scores_full[idx]
+            hybrid_score = alpha * vec_score + (1 - alpha) * bm_score
 
-            hybrid_score = alpha * vec_score + (1-alpha) * bm_score
-
-            hybrid_results.append({
-                "text": doc,
-                "vector_score": vec_score,
-                "bm25_score": bm_score,
-                "hybrid_score": hybrid_score
-            })
+            hybrid_results.append(
+                {
+                    "text": doc,
+                    "vector_score": vec_score,
+                    "bm25_score": bm_score,
+                    "hybrid_score": hybrid_score,
+                }
+            )
 
         hybrid_results.sort(key=lambda x: x["hybrid_score"], reverse=True)
         return hybrid_results[:top_k]
-

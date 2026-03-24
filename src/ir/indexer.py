@@ -1,5 +1,11 @@
-import re
+import json
 import os
+import random
+import re
+
+import chromadb
+import requests
+
 
 class MarkdownSectionParser:
     def __init__(self, service_name="lambda", max_tokens=400):
@@ -13,7 +19,7 @@ class MarkdownSectionParser:
         if not content.strip():
             return []
 
-        headings = list(re.finditer(r'^(#{1,6})\s+(.*)', content, re.MULTILINE))
+        headings = list(re.finditer(r"^(#{1,6})\s+(.*)", content, re.MULTILINE))
 
         # If no headings at all → fallback splitting
         if not headings:
@@ -29,10 +35,7 @@ class MarkdownSectionParser:
             return self._fallback_split(filepath, content)
 
         # Prefer H2
-        if 2 in levels:
-            chunk_level = 2
-        else:
-            chunk_level = levels[0]
+        chunk_level = 2 if 2 in levels else levels[0]
 
         chunks = []
 
@@ -48,38 +51,37 @@ class MarkdownSectionParser:
             section_text = content[start:end].strip()
 
             raw_title = heading.group(2).strip()
-            section_title = re.sub(r'<.*?>', '', raw_title).strip()
+            section_title = re.sub(r"<.*?>", "", raw_title).strip()
+
+            basename = os.path.basename(filepath)
+            chunk_id = f"{self.service_name}_{basename}_{len(chunks)}"
 
             chunk_text = self._format_chunk(
                 filepath=filepath,
                 section_title=section_title,
-                section_text=section_text
+                section_text=section_text,
             )
 
-            chunks.append({
-                "text": chunk_text,
-                "metadata": {
-                    "service": self.service_name,
-                    "file": os.path.basename(filepath),
-                    "section_title": section_title,
-                    "heading_level": chunk_level
+            chunks.append(
+                {
+                    "text": chunk_text,
+                    "metadata": {
+                        "service": self.service_name,
+                        "file": basename,
+                        "section_title": section_title,
+                        "heading_level": chunk_level,
+                        "chunk_id": chunk_id,
+                    },
                 }
-            })
+            )
 
         return chunks
-
 
     # -------------------------------
     # FALLBACK SPLITTING
     # -------------------------------
 
     def _fallback_split(self, filepath, content):
-        """
-        If no H2 sections exist:
-        1) Try split by bold subsection markers
-        2) Otherwise split by token window
-        """
-
         bold_chunks = self._split_by_bold_sections(filepath, content)
 
         if bold_chunks:
@@ -87,84 +89,77 @@ class MarkdownSectionParser:
 
         return self._split_by_token_length(filepath, content)
 
-
     def _split_by_bold_sections(self, filepath, content):
-        """
-        Split on patterns like:
-        + **Timeout**
-        + **Memory**
-        """
-
-        pattern = r'\n\+\s+\*\*(.*?)\*\*'
-
+        pattern = r"\n\+\s+\*\*(.*?)\*\*"
         matches = list(re.finditer(pattern, content))
 
         if len(matches) < 2:
             return []
 
+        basename = os.path.basename(filepath)
         chunks = []
 
         for i, match in enumerate(matches):
-
             start = match.start()
-
             end = matches[i + 1].start() if i + 1 < len(matches) else len(content)
 
             section_text = content[start:end].strip()
-
             section_title = match.group(1).strip()
+            chunk_id = f"{self.service_name}_{basename}_{i}"
 
             chunk_text = self._format_chunk(
                 filepath=filepath,
                 section_title=section_title,
-                section_text=section_text
+                section_text=section_text,
             )
 
-            chunks.append({
-                "text": chunk_text,
-                "metadata": {
-                    "service": self.service_name,
-                    "file": os.path.basename(filepath),
-                    "section_title": section_title,
-                    "heading_level": "bold_section"
+            chunks.append(
+                {
+                    "text": chunk_text,
+                    "metadata": {
+                        "service": self.service_name,
+                        "file": basename,
+                        "section_title": section_title,
+                        "heading_level": "bold_section",
+                        "chunk_id": chunk_id,
+                    },
                 }
-            })
+            )
 
         return chunks
 
-
     def _split_by_token_length(self, filepath, content):
-        """
-        Last fallback if document has no structure.
-        Splits roughly every N tokens.
-        """
-
         words = content.split()
+        basename = os.path.basename(filepath)
         chunks = []
 
         for i in range(0, len(words), self.max_tokens):
-
-            chunk_words = words[i:i+self.max_tokens]
+            chunk_words = words[i : i + self.max_tokens]
             section_text = " ".join(chunk_words)
+            chunk_num = i // self.max_tokens + 1
+            section_title = f"Chunk {chunk_num}"
+            chunk_id = f"{self.service_name}_{basename}_{chunk_num}"
 
             chunk_text = self._format_chunk(
                 filepath=filepath,
-                section_title=f"Chunk {i//self.max_tokens + 1}",
-                section_text=section_text
+                section_title=section_title,
+                section_text=section_text,
             )
 
-            chunks.append({
-                "text": chunk_text,
-                "metadata": {
-                    "service": self.service_name,
-                    "file": os.path.basename(filepath),
-                    "section_title": f"Chunk {i//self.max_tokens + 1}",
-                    "heading_level": "token_split"
+            chunks.append(
+                {
+                    "text": chunk_text,
+                    "metadata": {
+                        "service": self.service_name,
+                        "file": basename,
+                        "section_title": section_title,
+                        "heading_level": "token_split",
+                        "chunk_id": chunk_id,
+                    },
                 }
-            })
+            )
 
         return chunks
-
 
     def _format_chunk(self, filepath, section_title, section_text):
         return f"""Service: AWS {self.service_name.capitalize()}
@@ -175,18 +170,12 @@ Section: {section_title}
 """
 
 
-import requests
-import json
-
-
 class LlamaQueryGenerator:
-
     def __init__(self, model="llama3"):
         self.model = model
         self.url = "http://localhost:11434/api/generate"
 
     def generate_queries(self, chunk_text, service):
-
         prompt = f"""
 You are generating evaluation queries for an AWS documentation search system.
 
@@ -211,11 +200,7 @@ Documentation:
 
         r = requests.post(
             self.url,
-            json={
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False
-            }
+            json={"model": self.model, "prompt": prompt, "stream": False},
         )
 
         response_text = r.json()["response"]
@@ -231,33 +216,26 @@ Documentation:
         try:
             queries = json.loads(json_text)
             return queries
-        except:
+        except Exception:
             print("Failed to parse LLM output")
             print(response_text)
             return []
 
 
-import os
-import chromadb
-from chromadb.utils import embedding_functions
-import random
-
 class AwsSvcIndexer:
-
-    def __init__(self, base_docs_path, collection_name=None):
+    def __init__(self, base_docs_path, collection_name=None, chroma_path="../chroma_db"):
         self.base_docs_path = base_docs_path
         self.indexing_mode = collection_name is not None
 
         if self.indexing_mode:
-            self.client = chromadb.PersistentClient(path="../chroma_db")
+            self.client = chromadb.PersistentClient(path=chroma_path)
             self.collection = self.client.get_or_create_collection(name=collection_name)
         else:
             self.query_generator = LlamaQueryGenerator()
-        
+
         self.parser = MarkdownSectionParser()
 
     def normalize_service(self, folder_name):
-
         name = folder_name.lower()
         name = name.replace("amazon-", "")
         name = name.replace("aws-", "")
@@ -266,11 +244,11 @@ class AwsSvcIndexer:
         name = name.replace("-docs", "")
         return name
 
-    def index_services(self, svc_names):
+    def index_services(self, svc_names, eval_output_path="../eval_queries_ag.jsonl"):
         eval_file = None
 
         if not self.indexing_mode:
-            eval_file = open("../eval_queries_ag.jsonl", "w")
+            eval_file = open(eval_output_path, "w")
 
         for svc_folder in svc_names:
             svc_path = os.path.join(self.base_docs_path, svc_folder, "doc_source")
@@ -295,21 +273,18 @@ class AwsSvcIndexer:
                     chunks = self.parser.parse_file(filepath)
                     if not chunks:
                         continue
-                    
+
                     if not self.indexing_mode:
                         chunks = random.sample(chunks, min(len(chunks), 1))
 
                     for chunk in chunks:
                         text = chunk["text"]
-                        # -----------------------------
-                        # MODE 1 — INDEX TO CHROMA
-                        # -----------------------------
                         if self.indexing_mode:
-                            self.collection.add(documents=[text], metadatas=[chunk["metadata"]], ids=[chunk["metadata"]["chunk_id"]])
-
-                        # -----------------------------
-                        # MODE 2 — GENERATE QUERIES
-                        # -----------------------------
+                            self.collection.add(
+                                documents=[text],
+                                metadatas=[chunk["metadata"]],
+                                ids=[chunk["metadata"]["chunk_id"]],
+                            )
                         else:
                             if file in sampled_files:
                                 queries = self.query_generator.generate_queries(text, service_name)
@@ -318,44 +293,12 @@ class AwsSvcIndexer:
                                         "query": q["query"],
                                         "service": service_name,
                                         "src_doc": file,
-                                        "keywords": [chunk["metadata"]["section_title"].lower()]
+                                        "keywords": [chunk["metadata"]["section_title"].lower()],
                                     }
                                     eval_file.write(json.dumps(record) + "\n")
 
-            print(f"Finished indexing: {service_name}")
-        print("\nIndexing complete.")
+            print(f"Finished: {service_name}")
+
+        print("\nDone.")
         if eval_file:
             eval_file.close()
-
-
-svc_names = [
-             "aws-lambda-developer-guide",
-             "amazon-s3-developer-guide", 
-             "amazon-s3-getting-started-guide", 
-             "amazon-s3-user-guide",
-             "amazon-dynamodb-developer-guide",
-             "aws-dynamodb-encryption-docs",
-             "amazon-api-gateway-developer-guide",
-             "amazon-ecs-developer-guide",
-             "amazon-elasticsearch-service-developer-guide",
-             "amazon-eventbridge-user-guide",
-             "amazon-kendra-developer-guide",
-             "amazon-sagemaker-developer-guide",
-             "amazon-sns-developer-guide",
-             "amazon-sqs-developer-guide",
-             "aws-cli-user-guide",
-             "aws-glue-developer-guide",
-             "aws-secrets-manager-docs",
-             "iam-user-guide",
-             "amazon-opensearch-service-developer-guide",
-             "amazon-elasticache-docs",
-             "aws-cloudformation-user-guide",
-             "aws-data-pipeline-developer-guide",
-             "aws-step-functions-developer-guide"
-            ]
-svc_path =  "./documents"
-c_nm = "aws_docs"
-c_nm = None
-indexer = AwsSvcIndexer(base_docs_path=svc_path, collection_name=c_nm)
-indexer.index_services(svc_names)
-

@@ -1,10 +1,13 @@
+import requests
+
+
 class QueryRewriter:
     def rewrite(self, query: str, n_queries=2):
         self.n_queries = n_queries
 
-class OpenAIQueryRewriter(QueryRewriter):
 
-    def __init__(self, client):
+class OpenAIQueryRewriter(QueryRewriter):
+    def __init__(self, client, n_queries=2):
         self.client = client
         self.n_queries = n_queries
 
@@ -16,20 +19,16 @@ Return only the queries.
 """
         response = self.client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role":"user","content":prompt}],
-            temperature=0
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
         )
 
         return response.choices[0].message.content
 
-import requests
 
 class LlamaQueryRewriter(QueryRewriter):
-
     def __init__(self, n_queries=2):
-        #super().__init__(n_queries)
         self.n_queries = n_queries
-        #self.client = client
 
     def rewrite(self, query):
         prompt = f"""
@@ -51,25 +50,17 @@ User query:
 
         response = requests.post(
             "http://localhost:11434/api/generate",
-            json={
-                "model": "llama3",
-                "prompt": prompt,
-                "stream": False
-            }
+            json={"model": "llama3", "prompt": prompt, "stream": False},
         )
 
         r = response.json()["response"]
 
-        queries = [
-            q.strip()
-            for q in r.split("\n")
-            if q.strip()
-        ]
+        queries = [q.strip() for q in r.split("\n") if q.strip()]
 
         return list(queries)[1:]
 
-q = "how to set up basic execution role for lambda function"
-q = "concurrent lambda function executions limit"
 
-qw = LlamaQueryRewriter(2)
-print(qw.rewrite(q))
+if __name__ == "__main__":
+    q = "concurrent lambda function executions limit"
+    qw = LlamaQueryRewriter(2)
+    print(qw.rewrite(q))

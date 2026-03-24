@@ -1,7 +1,7 @@
 import json
 
-class RetrievalEvaluator:
 
+class RetrievalEvaluator:
     def __init__(self, pipeline):
         self.pipeline = pipeline
 
@@ -9,7 +9,6 @@ class RetrievalEvaluator:
         queries = []
         with open(filepath, "r") as f:
             for i, line in enumerate(f, start=1):
-
                 line = line.strip()
 
                 if not line:
@@ -33,7 +32,6 @@ class RetrievalEvaluator:
 
         return False
 
-
     def evaluate(self, eval_file, top_k=10):
         eval_queries = self.load_queries(eval_file)
 
@@ -43,7 +41,6 @@ class RetrievalEvaluator:
 
         total = len(eval_queries)
         for item in eval_queries:
-
             query = item["query"]
             keywords = item["keywords"]
             results = self.pipeline.query(query, top_k=top_k)
@@ -68,6 +65,5 @@ class RetrievalEvaluator:
             "total_queries": total,
             f"Recall@{top_k}": round(recall, 3),
             "HitRate@1": round(hit_rate, 3),
-            "MRR": round(mrr, 3)
+            "MRR": round(mrr, 3),
         }
-

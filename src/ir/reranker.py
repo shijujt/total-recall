@@ -1,5 +1,7 @@
-from typing import List, Dict
+from typing import Dict, List
+
 from sentence_transformers import CrossEncoder
+
 
 class Reranker:
     def __init__(self, model_name="cross-encoder/ms-marco-MiniLM-L-6-v2"):
@@ -14,4 +16,3 @@ class Reranker:
 
         candidates.sort(key=lambda x: x["rerank_score"], reverse=True)
         return candidates[:top_k]
-
