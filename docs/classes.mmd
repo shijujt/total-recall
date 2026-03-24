@@ -1,12 +1,4 @@
 classDiagram
-  class ClassA {
-    n_queries : int
-    rewrite(n_queries)
-  }
-  class ClassB {
-    client
-    rewrite(stuff)
-  }
   class HybridRetriever {
     bm25 : BM25Okapi, NoneType
     collection
@@ -54,4 +46,3 @@ classDiagram
   }
   LlamaQueryRewriter --|> QueryRewriter
   OpenAIQueryRewriter --|> QueryRewriter
-  ClassB --|> ClassA
