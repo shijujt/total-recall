@@ -45,7 +45,7 @@ class RetrievalEvaluator:
         for item in eval_queries:
             query = item["query"]
             keywords = item["keywords"]
-            results = self.pipeline.query(query, top_k=top_k)
+            results = self.pipeline.query(query, top_k=top_k)["results"]
             rank = None
             for i, r in enumerate(results):
                 if self.is_relevant(r["text"], keywords):

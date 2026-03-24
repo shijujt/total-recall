@@ -13,7 +13,7 @@ def make_result(text):
 def make_pipeline(results_per_call):
     """Return a mock pipeline whose query() returns results_per_call[i] on the i-th call."""
     pipeline = MagicMock()
-    pipeline.query.side_effect = results_per_call
+    pipeline.query.side_effect = [{"service": "lambda", "results": r} for r in results_per_call]
     return pipeline
 
 
