@@ -1,17 +1,12 @@
-from pathlib import Path
-
 import chromadb
 
+import ir.config as cfg
 from ir.evaluator import RetrievalEvaluator
 from ir.pipeline import RAGPipeline
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-CHROMA_PATH = PROJECT_ROOT / "chroma_db"
-EVAL_FILE = PROJECT_ROOT / "eval_queries_ag.jsonl"
-
-client = chromadb.PersistentClient(path=str(CHROMA_PATH))
-collection = client.get_collection(name="aws_docs")
+client = chromadb.PersistentClient(path=str(cfg.CHROMA_PATH))
+collection = client.get_collection(name=cfg.COLLECTION_NAME)
 
 evaluator = RetrievalEvaluator(RAGPipeline(collection))
-metrics = evaluator.evaluate(str(EVAL_FILE), top_k=10)
+metrics = evaluator.evaluate(str(cfg.EVAL_OUTPUT_FILE), top_k=cfg.EVAL_TOP_K)
 print(metrics)

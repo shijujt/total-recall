@@ -1,6 +1,8 @@
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
+import ir.config as cfg
+
 SERVICE_DESCRIPTIONS = {
     "s3": "s3 bucket buckets object objects key prefix policy storage lifecycle versioning replication",  # noqa: E501
     "lambda": "lambda function functions runtime handler timeout execution environment variables layers",  # noqa: E501
@@ -18,12 +20,12 @@ SERVICE_DESCRIPTIONS = {
 
 class ServicePredictor:
     def __init__(self):
-        self.model = SentenceTransformer("all-MiniLM-L6-v2")
+        self.model = SentenceTransformer(cfg.EMBEDDING_MODEL)
         self.services = list(SERVICE_DESCRIPTIONS.keys())
         texts = list(SERVICE_DESCRIPTIONS.values())
         self.embeddings = self.model.encode(texts, normalize_embeddings=True)
 
-    def predict(self, query, top_k=2):
+    def predict(self, query, top_k=cfg.SERVICE_PREDICTOR_TOP_K):
         q_emb = self.model.encode(query, normalize_embeddings=True)
         scores = np.dot(self.embeddings, q_emb)
 

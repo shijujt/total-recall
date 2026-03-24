@@ -6,9 +6,11 @@ import re
 import chromadb
 import requests
 
+import ir.config as cfg
+
 
 class MarkdownSectionParser:
-    def __init__(self, service_name="lambda", max_tokens=400):
+    def __init__(self, service_name="lambda", max_tokens=cfg.PARSER_MAX_TOKENS):
         self.service_name = service_name
         self.max_tokens = max_tokens
 
@@ -171,9 +173,9 @@ Section: {section_title}
 
 
 class LlamaQueryGenerator:
-    def __init__(self, model="llama3"):
+    def __init__(self, model=cfg.LLAMA_MODEL):
         self.model = model
-        self.url = "http://localhost:11434/api/generate"
+        self.url = cfg.OLLAMA_ENDPOINT
 
     def generate_queries(self, chunk_text, service):
         prompt = f"""
@@ -223,7 +225,7 @@ Documentation:
 
 
 class AwsSvcIndexer:
-    def __init__(self, base_docs_path, collection_name=None, chroma_path="../chroma_db"):
+    def __init__(self, base_docs_path, collection_name=None, chroma_path=str(cfg.CHROMA_PATH)):
         self.base_docs_path = base_docs_path
         self.indexing_mode = collection_name is not None
 
@@ -244,7 +246,7 @@ class AwsSvcIndexer:
         name = name.replace("-docs", "")
         return name
 
-    def index_services(self, svc_names, eval_output_path="../eval_queries_ag.jsonl"):
+    def index_services(self, svc_names, eval_output_path=str(cfg.EVAL_OUTPUT_FILE)):
         eval_file = None
 
         if not self.indexing_mode:

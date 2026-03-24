@@ -2,12 +2,14 @@ from typing import Dict, List
 
 from sentence_transformers import CrossEncoder
 
+import ir.config as cfg
+
 
 class Reranker:
-    def __init__(self, model_name="cross-encoder/ms-marco-MiniLM-L-6-v2"):
+    def __init__(self, model_name=cfg.RERANKER_MODEL):
         self.model = CrossEncoder(model_name)
 
-    def rerank(self, query: str, candidates: List[Dict], top_k: int = 5):
+    def rerank(self, query: str, candidates: List[Dict], top_k: int = cfg.RERANKER_TOP_K):
         pairs = [(query, c["text"]) for c in candidates]
         scores = self.model.predict(pairs)
 

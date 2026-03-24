@@ -1,5 +1,7 @@
 import json
 
+import ir.config as cfg
+
 
 class RetrievalEvaluator:
     def __init__(self, pipeline):
@@ -32,7 +34,7 @@ class RetrievalEvaluator:
 
         return False
 
-    def evaluate(self, eval_file, top_k=10):
+    def evaluate(self, eval_file, top_k=cfg.EVAL_TOP_K):
         eval_queries = self.load_queries(eval_file)
 
         hits = 0

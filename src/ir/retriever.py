@@ -3,6 +3,8 @@ import re
 import numpy as np
 from rank_bm25 import BM25Okapi
 
+import ir.config as cfg
+
 
 class HybridRetriever:
     def __init__(self, chroma_collection):
@@ -21,9 +23,9 @@ class HybridRetriever:
         self.bm25 = BM25Okapi(self.tokenized_docs)
         self.doc_index = {doc: i for i, doc in enumerate(self.documents)}
 
-    def hybrid_search(self, query: str, alpha: float = 0.5, top_k: int = 10, service_filter=None):
-        vector_top_k = 30
-        bm25_top_k = 30
+    def hybrid_search(self, query: str, alpha: float = cfg.RETRIEVER_ALPHA, top_k: int = cfg.RETRIEVER_HYBRID_TOP_K, service_filter=None):
+        vector_top_k = cfg.RETRIEVER_VECTOR_TOP_K
+        bm25_top_k = cfg.RETRIEVER_BM25_TOP_K
 
         # --- Vector search ---
         vector_results = self.collection.query(

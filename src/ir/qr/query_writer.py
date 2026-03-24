@@ -1,5 +1,7 @@
 import requests
 
+import ir.config as cfg
+
 
 class QueryRewriter:
     def rewrite(self, query: str, n_queries=2):
@@ -7,7 +9,7 @@ class QueryRewriter:
 
 
 class OpenAIQueryRewriter(QueryRewriter):
-    def __init__(self, client, n_queries=2):
+    def __init__(self, client, n_queries=cfg.QUERY_REWRITER_N_QUERIES):
         self.client = client
         self.n_queries = n_queries
 
@@ -18,7 +20,7 @@ Question: {query}
 Return only the queries.
 """
         response = self.client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=cfg.OPENAI_MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
         )
@@ -27,7 +29,7 @@ Return only the queries.
 
 
 class LlamaQueryRewriter(QueryRewriter):
-    def __init__(self, n_queries=2):
+    def __init__(self, n_queries=cfg.QUERY_REWRITER_N_QUERIES):
         self.n_queries = n_queries
 
     def rewrite(self, query):
@@ -49,8 +51,8 @@ User query:
 """
 
         response = requests.post(
-            "http://localhost:11434/api/generate",
-            json={"model": "llama3", "prompt": prompt, "stream": False},
+            cfg.OLLAMA_ENDPOINT,
+            json={"model": cfg.LLAMA_MODEL, "prompt": prompt, "stream": False},
         )
 
         r = response.json()["response"]

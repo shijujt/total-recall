@@ -1,14 +1,10 @@
-from pathlib import Path
-
 import chromadb
 
+import ir.config as cfg
 from ir.pipeline import RAGPipeline
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-CHROMA_PATH = PROJECT_ROOT / "chroma_db"
-
-client = chromadb.PersistentClient(path=str(CHROMA_PATH))
-collection = client.get_collection(name="aws_docs")
+client = chromadb.PersistentClient(path=str(cfg.CHROMA_PATH))
+collection = client.get_collection(name=cfg.COLLECTION_NAME)
 
 rag = RAGPipeline(collection)
 

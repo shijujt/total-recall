@@ -36,13 +36,13 @@ Top-K Results           ← with vector, BM25, hybrid, and rerank scores
 
 | Component | File | Description |
 |---|---|---|
-| `RAGPipeline` | `rag_pipeline.py` | Orchestrates the full pipeline |
-| `HybridRetriever` | `rag_retriever.py` | Vector + BM25 hybrid search |
-| `Reranker` | `rag_reranker.py` | CrossEncoder reranking |
-| `ServicePredictor` | `rag_service_predictor.py` | Identifies target AWS service |
-| `LlamaQueryRewriter` | `qr/query_writer.py` | Query expansion via Llama3 |
-| `AwsSvcIndexer` | `rag_indexer.py` | Parses and indexes documentation |
-| `RetrievalEvaluator` | `rag_ret_eval.py` | Evaluation metrics (Recall, MRR) |
+| `RAGPipeline` | [`src/ir/pipeline.py`](src/ir/pipeline.py) | Orchestrates the full pipeline |
+| `HybridRetriever` | [`src/ir/retriever.py`](src/ir/retriever.py) | Vector + BM25 hybrid search |
+| `Reranker` | [`src/ir/reranker.py`](src/ir/reranker.py) | CrossEncoder reranking |
+| `ServicePredictor` | [`src/ir/service_predictor.py`](src/ir/service_predictor.py) | Identifies target AWS service |
+| `LlamaQueryRewriter` | [`src/ir/qr/query_writer.py`](src/ir/qr/query_writer.py) | Query expansion via Llama3 |
+| `AwsSvcIndexer` | [`src/ir/indexer.py`](src/ir/indexer.py) | Parses and indexes documentation |
+| `RetrievalEvaluator` | [`src/ir/evaluator.py`](src/ir/evaluator.py) | Evaluation metrics (Recall, MRR) |
 
 ## Prerequisites
 
@@ -60,26 +60,18 @@ ollama pull llama3
 git clone <repo>
 cd ir
 
-python -m venv .venv
-source .venv/bin/activate
-
-# using uv (recommended)
-pip install uv
-uv sync
-
-# or pip directly
-pip install chromadb sentence-transformers torch rank-bm25 nltk numpy requests
+uv sync              # runtime deps only
+uv sync --group dev  # include dev tools (ruff, pytest, mypy)
 ```
 
 ## Usage
 
 ### 1. Index AWS Documentation
 
-Parses markdown files from `docs/` and stores chunks in a local Chroma database (`chroma_db/`).
+Parses markdown files from `assets/` and stores chunks in a local Chroma database (`chroma_db/`).
 
 ```bash
-cd src
-python main_indexer.py
+uv run python scripts/run_indexer.py
 ```
 
 ### 2. Query the Pipeline
@@ -87,8 +79,7 @@ python main_indexer.py
 Runs example queries against the indexed collection and displays ranked results with scores.
 
 ```bash
-cd src
-python main_pipeline.py
+uv run python scripts/run_pipeline.py
 ```
 
 Example output:
@@ -106,11 +97,19 @@ Rank 1 — rerank: 9.43 | hybrid: 0.81 | vector: 0.79 | bm25: 0.83
 Evaluates retrieval quality against `eval_queries_ag.jsonl` (500 synthetic queries).
 
 ```bash
-cd src
-python main_ret_eval.py
+uv run python scripts/run_eval.py
 ```
 
 Reports Recall@k, HitRate@1, and MRR.
+
+## Development
+
+```bash
+uv run pytest                 # tests + coverage
+uv run ruff check src tests   # lint
+uv run ruff format src tests  # format
+uv run mypy src               # type check
+```
 
 ## Configuration
 
@@ -175,27 +174,33 @@ Relevance is determined by keyword matching against retrieved document text.
 
 ```
 ir/
-├── src/
-│   ├── main_indexer.py           # Index documentation
-│   ├── main_pipeline.py          # Run example queries
-│   ├── main_ret_eval.py          # Run evaluation
-│   ├── rag_pipeline.py           # Pipeline orchestration
-│   ├── rag_retriever.py          # Hybrid retrieval (vector + BM25)
-│   ├── rag_reranker.py           # CrossEncoder reranking
-│   ├── rag_indexer.py            # Document parsing and indexing
-│   ├── rag_ret_eval.py           # Evaluation harness
-│   ├── rag_service_predictor.py  # AWS service classification
+├── src/ir/
+│   ├── pipeline.py                   # Pipeline orchestration
+│   ├── retriever.py                  # Hybrid retrieval (vector + BM25)
+│   ├── reranker.py                   # CrossEncoder reranking
+│   ├── indexer.py                    # Document parsing and indexing
+│   ├── evaluator.py                  # Evaluation harness
+│   ├── service_predictor.py          # AWS service classification
 │   └── qr/
-│       └── query_writer.py       # Query rewriting (Llama, OpenAI)
+│       └── query_writer.py           # Query rewriting (Llama, OpenAI)
+├── scripts/
+│   ├── run_indexer.py                # Index documentation
+│   ├── run_pipeline.py               # Run example queries
+│   └── run_eval.py                   # Run evaluation
+├── tests/
+│   ├── test_indexer.py
+│   ├── test_retriever.py
+│   └── test_evaluator.py
 ├── docs/
-│   ├── classes.mmd               # Class diagram
-│   ├── packages.mmd              # Module dependency diagram
-│   ├── seq_indexer.mmd           # Sequence diagram: main_indexer
-│   ├── seq_pipeline.mmd          # Sequence diagram: main_pipeline
-│   └── seq_eval.mmd              # Sequence diagram: main_ret_eval
-├── chroma_db/                    # Persistent vector store (auto-created)
-├── eval_queries.jsonl            # Evaluation queries (manual)
-├── eval_queries_ag.jsonl         # Evaluation queries (Llama-generated, 500)
+│   ├── classes.mmd                   # Class diagram
+│   ├── packages.mmd                  # Module dependency diagram
+│   ├── seq_indexer.mmd               # Sequence diagram: run_indexer
+│   ├── seq_pipeline.mmd              # Sequence diagram: run_pipeline
+│   └── seq_eval.mmd                  # Sequence diagram: run_eval
+├── assets/                           # AWS documentation source files
+├── chroma_db/                        # Persistent vector store (auto-created)
+├── eval_queries.jsonl                # Evaluation queries (manual)
+├── eval_queries_ag.jsonl             # Evaluation queries (Llama-generated, 500)
 └── pyproject.toml
 ```
 

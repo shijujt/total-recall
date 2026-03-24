@@ -1,3 +1,4 @@
+import ir.config as cfg
 from ir.qr.query_writer import LlamaQueryRewriter
 from ir.reranker import Reranker
 from ir.retriever import HybridRetriever
@@ -7,7 +8,7 @@ from ir.service_predictor import ServicePredictor
 class RAGPipeline:
     def __init__(self, chroma_collection):
         self.hybrid = HybridRetriever(chroma_collection)
-        self.rewriter = LlamaQueryRewriter(2)
+        self.rewriter = LlamaQueryRewriter(cfg.QUERY_REWRITER_N_QUERIES)
         self.reranker = Reranker()
         self.service_predictor = ServicePredictor()
 
@@ -17,7 +18,7 @@ class RAGPipeline:
 
     def query(self, query: str, top_k: int = 5):
         # STEP 1 — Predict service
-        services = self.service_predictor.predict(query, top_k=2)
+        services = self.service_predictor.predict(query, top_k=cfg.SERVICE_PREDICTOR_TOP_K)
         print("\nPredicted services:", services)
         best_service = services[0][0]
 
@@ -31,7 +32,7 @@ class RAGPipeline:
         # Step 3: Retrieve for each query
         all_candidates = []
         for q in rewritten_queries:
-            results = self.hybrid.hybrid_search(q, alpha=0.5, top_k=20, service_filter=best_service)
+            results = self.hybrid.hybrid_search(q, alpha=cfg.RETRIEVER_ALPHA, top_k=cfg.RETRIEVER_HYBRID_TOP_K, service_filter=best_service)
             all_candidates.extend(results)
 
         # Step 4: Deduplicate

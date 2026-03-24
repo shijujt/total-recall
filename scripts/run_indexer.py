@@ -1,11 +1,5 @@
-from pathlib import Path
-
+import ir.config as cfg
 from ir.indexer import AwsSvcIndexer
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-CHROMA_PATH = PROJECT_ROOT / "chroma_db"
-ASSETS_PATH = PROJECT_ROOT / "assets"
-EVAL_OUTPUT = PROJECT_ROOT / "eval_queries_ag.jsonl"
 
 SVC_NAMES = [
     "aws-lambda-developer-guide",
@@ -33,12 +27,10 @@ SVC_NAMES = [
     "aws-step-functions-developer-guide",
 ]
 
-# Set collection_name to "aws_docs" to index, or None to generate eval queries
-COLLECTION_NAME = "aws_docs"
-
+# Set collection_name to cfg.COLLECTION_NAME to index, or None to generate eval queries
 indexer = AwsSvcIndexer(
-    base_docs_path=str(ASSETS_PATH),
-    collection_name=COLLECTION_NAME,
-    chroma_path=str(CHROMA_PATH),
+    base_docs_path=str(cfg.ASSETS_PATH),
+    collection_name=cfg.COLLECTION_NAME,
+    chroma_path=str(cfg.CHROMA_PATH),
 )
-indexer.index_services(SVC_NAMES, eval_output_path=str(EVAL_OUTPUT))
+indexer.index_services(SVC_NAMES, eval_output_path=str(cfg.EVAL_OUTPUT_FILE))
