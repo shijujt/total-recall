@@ -1,0 +1,17 @@
+from typing import List, Dict
+from sentence_transformers import CrossEncoder
+
+class Reranker:
+    def __init__(self, model_name="cross-encoder/ms-marco-MiniLM-L-6-v2"):
+        self.model = CrossEncoder(model_name)
+
+    def rerank(self, query: str, candidates: List[Dict], top_k: int = 5):
+        pairs = [(query, c["text"]) for c in candidates]
+        scores = self.model.predict(pairs)
+
+        for candidate, score in zip(candidates, scores):
+            candidate["rerank_score"] = float(score)
+
+        candidates.sort(key=lambda x: x["rerank_score"], reverse=True)
+        return candidates[:top_k]
+

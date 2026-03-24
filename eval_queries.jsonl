@@ -1,0 +1,95 @@
+{"query":"create s3 bucket","service":"s3","keywords":["bucket"]}
+{"query":"configure bucket policy","service":"s3","keywords":["bucket policy"]}
+{"query":"enable s3 versioning","service":"s3","keywords":["versioning"]}
+{"query":"set lifecycle policy for s3 objects","service":"s3","keywords":["lifecycle"]}
+{"query":"grant access to s3 bucket","service":"s3","keywords":["bucket policy"]}
+
+{"query":"create dynamodb table","service":"dynamodb","keywords":["table"]}
+{"query":"what is dynamodb partition key","service":"dynamodb","keywords":["partition key"]}
+{"query":"add global secondary index dynamodb","service":"dynamodb","keywords":["secondary index"]}
+{"query":"set read write capacity dynamodb","service":"dynamodb","keywords":["throughput"]}
+{"query":"query dynamodb table using sort key","service":"dynamodb","keywords":["sort key"]}
+
+{"query":"maximum lambda timeout","service":"lambda","keywords":["timeout"]}
+{"query":"configure lambda environment variables","service":"lambda","keywords":["environment variables"]}
+{"query":"deploy python lambda function","service":"lambda","keywords":["lambda function"]}
+{"query":"lambda execution role configuration","service":"lambda","keywords":["execution role"]}
+{"query":"package dependencies for lambda","service":"lambda","keywords":["deployment package"]}
+
+{"query":"create sns topic","service":"sns","keywords":["topic"]}
+{"query":"publish message to sns topic","service":"sns","keywords":["publish"]}
+{"query":"subscribe endpoint to sns topic","service":"sns","keywords":["subscribe"]}
+{"query":"sns message filtering","service":"sns","keywords":["filter"]}
+{"query":"sns topic permissions","service":"sns","keywords":["topic policy"]}
+
+{"query":"create sqs queue","service":"sqs","keywords":["queue"]}
+{"query":"set sqs visibility timeout","service":"sqs","keywords":["visibility timeout"]}
+{"query":"receive messages from sqs queue","service":"sqs","keywords":["receive message"]}
+{"query":"delete message from sqs","service":"sqs","keywords":["delete message"]}
+{"query":"configure sqs dead letter queue","service":"sqs","keywords":["dead letter"]}
+
+{"query":"create step functions state machine","service":"step-functions","keywords":["state machine"]}
+{"query":"step functions workflow execution","service":"step-functions","keywords":["execution"]}
+{"query":"step functions task state","service":"step-functions","keywords":["task state"]}
+{"query":"step functions retry policy","service":"step-functions","keywords":["retry"]}
+{"query":"step functions lambda integration","service":"step-functions","keywords":["lambda"]}
+
+{"query":"create api gateway rest api","service":"api-gateway","keywords":["rest api"]}
+{"query":"deploy api gateway stage","service":"api-gateway","keywords":["deployment"]}
+{"query":"integrate api gateway with lambda","service":"api-gateway","keywords":["lambda integration"]}
+{"query":"configure api gateway endpoint","service":"api-gateway","keywords":["endpoint"]}
+{"query":"enable cors api gateway","service":"api-gateway","keywords":["cors"]}
+
+{"query":"create ecs cluster","service":"ecs","keywords":["cluster"]}
+{"query":"run ecs task","service":"ecs","keywords":["task"]}
+{"query":"deploy ecs service","service":"ecs","keywords":["service"]}
+{"query":"configure ecs task definition","service":"ecs","keywords":["task definition"]}
+{"query":"ecs container networking","service":"ecs","keywords":["container"]}
+
+{"query":"create eventbridge rule","service":"eventbridge","keywords":["rule"]}
+{"query":"send event to eventbridge bus","service":"eventbridge","keywords":["event bus"]}
+{"query":"eventbridge schedule rule","service":"eventbridge","keywords":["schedule"]}
+{"query":"eventbridge target configuration","service":"eventbridge","keywords":["target"]}
+{"query":"eventbridge lambda trigger","service":"eventbridge","keywords":["lambda"]}
+
+{"query":"what is aws glue data catalog","service":"glue","keywords":["data catalog"]}
+{"query":"create glue crawler","service":"glue","keywords":["crawler"]}
+{"query":"run glue etl job","service":"glue","keywords":["etl job"]}
+{"query":"glue spark job configuration","service":"glue","keywords":["spark"]}
+{"query":"glue table schema","service":"glue","keywords":["table"]}
+
+{"query":"create iam role","service":"iam","keywords":["role"]}
+{"query":"attach policy to iam role","service":"iam","keywords":["policy"]}
+{"query":"create iam user","service":"iam","keywords":["user"]}
+{"query":"iam permissions policy example","service":"iam","keywords":["policy"]}
+{"query":"grant lambda iam permissions","service":"iam","keywords":["role"]}
+
+{"query":"create cloudformation stack","service":"cloudformation","keywords":["stack"]}
+{"query":"cloudformation template parameters","service":"cloudformation","keywords":["template"]}
+{"query":"update cloudformation stack","service":"cloudformation","keywords":["update"]}
+{"query":"cloudformation resource definition","service":"cloudformation","keywords":["resource"]}
+{"query":"cloudformation outputs section","service":"cloudformation","keywords":["outputs"]}
+
+{"query":"create opensearch domain","service":"opensearch-service","keywords":["domain"]}
+{"query":"index document in opensearch","service":"opensearch-service","keywords":["index"]}
+{"query":"search query opensearch","service":"opensearch-service","keywords":["search"]}
+{"query":"opensearch cluster scaling","service":"opensearch-service","keywords":["cluster"]}
+{"query":"opensearch access policy","service":"opensearch-service","keywords":["access policy"]}
+
+{"query":"create elasticache redis cluster","service":"elasticache","keywords":["redis"]}
+{"query":"elasticache memcached setup","service":"elasticache","keywords":["memcached"]}
+{"query":"elasticache node configuration","service":"elasticache","keywords":["node"]}
+{"query":"elasticache cache parameter group","service":"elasticache","keywords":["parameter"]}
+{"query":"elasticache cluster scaling","service":"elasticache","keywords":["cluster"]}
+
+{"query":"store secret in secrets manager","service":"secrets-manager","keywords":["secret"]}
+{"query":"retrieve secret secrets manager","service":"secrets-manager","keywords":["get secret"]}
+{"query":"rotate database credentials secrets manager","service":"secrets-manager","keywords":["rotate"]}
+{"query":"secrets manager lambda rotation","service":"secrets-manager","keywords":["rotation"]}
+{"query":"secrets manager access policy","service":"secrets-manager","keywords":["policy"]}
+
+{"query":"aws cli configure profile","service":"cli","keywords":["profile"]}
+{"query":"list s3 buckets aws cli","service":"cli","keywords":["s3 ls"]}
+{"query":"copy file to s3 using cli","service":"cli","keywords":["cp"]}
+{"query":"aws cli environment variables","service":"cli","keywords":["environment"]}
+{"query":"aws cli credentials configuration","service":"cli","keywords":["credentials"]}

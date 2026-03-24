@@ -1,0 +1,57 @@
+classDiagram
+  class ClassA {
+    n_queries : int
+    rewrite(n_queries)
+  }
+  class ClassB {
+    client
+    rewrite(stuff)
+  }
+  class HybridRetriever {
+    bm25 : BM25Okapi, NoneType
+    collection
+    doc_index
+    documents : list
+    tokenized_docs : list
+    build_bm25_index()
+    hybrid_search(query: str, alpha: float, top_k: int, service_filter)
+  }
+  class LlamaQueryRewriter {
+    n_queries : int
+    rewrite(query)
+  }
+  class OpenAIQueryRewriter {
+    client
+    n_queries
+    rewrite(query)
+  }
+  class QueryRewriter {
+    n_queries : int
+    rewrite(query: str, n_queries)
+  }
+  class RAGPipeline {
+    hybrid
+    reranker
+    rewriter
+    service_predictor
+    query(query: str, top_k: int)
+  }
+  class Reranker {
+    model : CrossEncoder
+    rerank(query: str, candidates: List[Dict], top_k: int)
+  }
+  class RetrievalEvaluator {
+    pipeline
+    evaluate(eval_file, top_k)
+    is_relevant(chunk_text, keywords)
+    load_queries(filepath)
+  }
+  class ServicePredictor {
+    embeddings : ndarray
+    model : SentenceTransformer
+    services : list
+    predict(query, top_k)
+  }
+  LlamaQueryRewriter --|> QueryRewriter
+  OpenAIQueryRewriter --|> QueryRewriter
+  ClassB --|> ClassA

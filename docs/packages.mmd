@@ -1,0 +1,30 @@
+classDiagram
+  class prod {
+  }
+  class main_pipeline {
+  }
+  class main_ret_eval {
+  }
+  class qr {
+  }
+  class query_writer {
+  }
+  class rag_pipeline {
+  }
+  class rag_reranker {
+  }
+  class rag_ret_eval {
+  }
+  class rag_retriever {
+  }
+  class rag_service_predictor {
+  }
+  class test_py {
+  }
+  main_pipeline --> rag_pipeline
+  main_ret_eval --> rag_pipeline
+  main_ret_eval --> rag_ret_eval
+  rag_pipeline --> query_writer
+  rag_pipeline --> rag_reranker
+  rag_pipeline --> rag_retriever
+  rag_pipeline --> rag_service_predictor
