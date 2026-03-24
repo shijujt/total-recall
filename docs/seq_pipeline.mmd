@@ -1,5 +1,5 @@
 sequenceDiagram
-    participant Script as main_pipeline
+    participant Script as run_pipeline
     participant Chroma as ChromaDB
     participant Pipeline as RAGPipeline
     participant SP as ServicePredictor
@@ -8,11 +8,11 @@ sequenceDiagram
     participant HR as HybridRetriever
     participant RR as Reranker
 
-    Script->>Chroma: PersistentClient() + get_collection("aws_docs")
+    Script->>Chroma: PersistentClient(cfg.CHROMA_PATH) + get_collection(cfg.COLLECTION_NAME)
     Script->>Pipeline: __init__(collection)
-    Pipeline->>SP: __init__()
-    Pipeline->>QR: __init__(n_queries=2)
-    Pipeline->>RR: __init__() — loads CrossEncoder model
+    Pipeline->>SP: __init__() — loads cfg.EMBEDDING_MODEL
+    Pipeline->>QR: __init__(cfg.QUERY_REWRITER_N_QUERIES)
+    Pipeline->>RR: __init__() — loads cfg.RERANKER_MODEL
     Pipeline->>HR: __init__(collection)
     Pipeline->>HR: build_bm25_index()
     HR->>Chroma: collection.get(include=["documents"])
@@ -21,29 +21,29 @@ sequenceDiagram
 
     Script->>Pipeline: query(q)
 
-    Pipeline->>SP: predict(query, top_k=2)
+    Pipeline->>SP: predict(query, top_k=cfg.SERVICE_PREDICTOR_TOP_K)
     Note over SP: cosine similarity vs service embeddings
     SP-->>Pipeline: [(service, score), ...]
 
     Pipeline->>QR: rewrite(query)
-    QR->>Ollama: POST /api/generate — llama3
-    Ollama-->>QR: 2 alternative query formulations
+    QR->>Ollama: POST cfg.OLLAMA_ENDPOINT — cfg.LLAMA_MODEL
+    Ollama-->>QR: cfg.QUERY_REWRITER_N_QUERIES alternative query formulations
     QR-->>Pipeline: rewritten_queries[]
 
     loop for each rewritten query
-        Pipeline->>HR: hybrid_search(q, alpha=0.5, top_k=20, service_filter)
+        Pipeline->>HR: hybrid_search(q, alpha=cfg.RETRIEVER_ALPHA, top_k=cfg.RETRIEVER_HYBRID_TOP_K, service_filter)
         HR->>Chroma: collection.query(query_texts, where={service})
-        Chroma-->>HR: vector search results + distances
-        Note over HR: BM25 scores computed in-memory
-        Note over HR: hybrid = 0.5 * vec_score + 0.5 * bm25_score
+        Chroma-->>HR: vector search results + distances (cfg.RETRIEVER_VECTOR_TOP_K)
+        Note over HR: BM25 scores computed in-memory (cfg.RETRIEVER_BM25_TOP_K candidates)
+        Note over HR: hybrid = cfg.RETRIEVER_ALPHA * vec_score + (1 - cfg.RETRIEVER_ALPHA) * bm25_score
         HR-->>Pipeline: scored candidates[]
     end
 
     Note over Pipeline: union + deduplicate by text
 
-    Pipeline->>RR: rerank(original_query, candidates, top_k=5)
+    Pipeline->>RR: rerank(original_query, candidates, top_k=cfg.RERANKER_TOP_K)
     Note over RR: CrossEncoder scores each (query, doc) pair
-    RR-->>Pipeline: top-5 results with rerank_score
+    RR-->>Pipeline: top cfg.RERANKER_TOP_K results with rerank_score
 
     Pipeline-->>Script: results[{text, vector_score, bm25_score, hybrid_score, rerank_score}]
     Script->>Script: confidence_label(scores[0], scores[1])

@@ -1,12 +1,39 @@
 classDiagram
-  class HybridRetriever {
-    bm25 : BM25Okapi, NoneType
+  class MarkdownSectionParser {
+    service_name : str
+    max_tokens : int
+    parse_file(filepath)
+    _fallback_split(filepath, content)
+    _split_by_bold_sections(filepath, content)
+    _split_by_token_length(filepath, content)
+    _format_chunk(filepath, section_title, section_text)
+  }
+  class LlamaQueryGenerator {
+    model : str
+    url : str
+    generate_queries(chunk_text, service)
+  }
+  class AwsSvcIndexer {
+    base_docs_path : str
+    indexing_mode : bool
     collection
-    doc_index
+    parser : MarkdownSectionParser
+    query_generator : LlamaQueryGenerator
+    index_services(svc_names, eval_output_path)
+    normalize_service(folder_name)
+  }
+  class HybridRetriever {
+    collection
+    bm25 : BM25Okapi
     documents : list
     tokenized_docs : list
+    doc_index : dict
     build_bm25_index()
     hybrid_search(query: str, alpha: float, top_k: int, service_filter)
+  }
+  class QueryRewriter {
+    n_queries : int
+    rewrite(query: str, n_queries)
   }
   class LlamaQueryRewriter {
     n_queries : int
@@ -14,35 +41,38 @@ classDiagram
   }
   class OpenAIQueryRewriter {
     client
-    n_queries
-    rewrite(query)
-  }
-  class QueryRewriter {
     n_queries : int
-    rewrite(query: str, n_queries)
-  }
-  class RAGPipeline {
-    hybrid
-    reranker
-    rewriter
-    service_predictor
-    query(query: str, top_k: int)
+    rewrite(query)
   }
   class Reranker {
     model : CrossEncoder
     rerank(query: str, candidates: List[Dict], top_k: int)
   }
-  class RetrievalEvaluator {
-    pipeline
-    evaluate(eval_file, top_k)
-    is_relevant(chunk_text, keywords)
-    load_queries(filepath)
-  }
   class ServicePredictor {
-    embeddings : ndarray
     model : SentenceTransformer
     services : list
+    embeddings : ndarray
     predict(query, top_k)
+  }
+  class RAGPipeline {
+    hybrid : HybridRetriever
+    rewriter : LlamaQueryRewriter
+    reranker : Reranker
+    service_predictor : ServicePredictor
+    query(query: str, top_k: int)
+  }
+  class RetrievalEvaluator {
+    pipeline : RAGPipeline
+    load_queries(filepath)
+    is_relevant(chunk_text, keywords)
+    evaluate(eval_file, top_k)
   }
   LlamaQueryRewriter --|> QueryRewriter
   OpenAIQueryRewriter --|> QueryRewriter
+  AwsSvcIndexer *-- MarkdownSectionParser
+  AwsSvcIndexer *-- LlamaQueryGenerator
+  RAGPipeline *-- HybridRetriever
+  RAGPipeline *-- LlamaQueryRewriter
+  RAGPipeline *-- Reranker
+  RAGPipeline *-- ServicePredictor
+  RetrievalEvaluator *-- RAGPipeline

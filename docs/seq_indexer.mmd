@@ -1,5 +1,5 @@
 sequenceDiagram
-    participant Script as main_indexer
+    participant Script as run_indexer
     participant Indexer as AwsSvcIndexer
     participant Parser as MarkdownSectionParser
     participant QG as LlamaQueryGenerator
@@ -7,14 +7,14 @@ sequenceDiagram
     participant Chroma as ChromaDB
     participant FS as Filesystem
 
-    Script->>Indexer: __init__(base_docs_path, collection_name)
+    Script->>Indexer: __init__(cfg.ASSETS_PATH, cfg.COLLECTION_NAME, cfg.CHROMA_PATH)
     alt indexing_mode (collection_name != None)
         Indexer->>Chroma: PersistentClient() + get_or_create_collection()
     else query_gen_mode (collection_name == None)
-        Indexer->>QG: __init__()
+        Indexer->>QG: __init__(cfg.LLAMA_MODEL)
     end
 
-    Script->>Indexer: index_services(svc_names)
+    Script->>Indexer: index_services(SVC_NAMES, cfg.EVAL_OUTPUT_FILE)
 
     loop for each service folder
         Indexer->>FS: os.walk(svc_path/doc_source)
@@ -26,17 +26,17 @@ sequenceDiagram
             else bold sections present
                 Parser-->>Indexer: chunks split at bold markers
             else no structure
-                Parser-->>Indexer: chunks split by token window (400 tokens)
+                Parser-->>Indexer: chunks split by token window (cfg.PARSER_MAX_TOKENS)
             end
 
             alt indexing_mode
                 Indexer->>Chroma: collection.add(documents, metadatas, ids)
             else query_gen_mode
                 Indexer->>QG: generate_queries(chunk_text, service_name)
-                QG->>Ollama: POST /api/generate — llama3
+                QG->>Ollama: POST cfg.OLLAMA_ENDPOINT — cfg.LLAMA_MODEL
                 Ollama-->>QG: JSON with 3 developer questions
                 QG-->>Indexer: queries[]
-                Indexer->>FS: append records to eval_queries_ag.jsonl
+                Indexer->>FS: append records to cfg.EVAL_OUTPUT_FILE
             end
         end
     end

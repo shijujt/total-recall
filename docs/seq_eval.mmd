@@ -1,34 +1,34 @@
 sequenceDiagram
-    participant Script as main_ret_eval
+    participant Script as run_eval
     participant Chroma as ChromaDB
     participant Pipeline as RAGPipeline
     participant Eval as RetrievalEvaluator
     participant FS as Filesystem
 
-    Script->>Chroma: PersistentClient() + get_collection("aws_docs")
+    Script->>Chroma: PersistentClient(cfg.CHROMA_PATH) + get_collection(cfg.COLLECTION_NAME)
     Script->>Pipeline: RAGPipeline(collection)
     Note over Pipeline: builds BM25 index on init
     Script->>Eval: __init__(pipeline)
 
-    Script->>Eval: evaluate("eval_queries_ag.jsonl", top_k=10)
+    Script->>Eval: evaluate(cfg.EVAL_OUTPUT_FILE, top_k=cfg.EVAL_TOP_K)
     Eval->>FS: load_queries(eval_file)
-    FS-->>Eval: 500 query records [{query, service, src_doc, keywords}]
+    FS-->>Eval: query records [{query, service, src_doc, keywords}]
 
-    loop for each query (500 total)
-        Eval->>Pipeline: query(query_text, top_k=10)
+    loop for each query
+        Eval->>Pipeline: query(query_text, top_k=cfg.EVAL_TOP_K)
         Note over Pipeline: full pipeline — predict → rewrite → retrieve → rerank
-        Pipeline-->>Eval: results[0..9]
+        Pipeline-->>Eval: results[0..cfg.EVAL_TOP_K-1]
 
-        loop scan results at rank 1..10
+        loop scan results at rank 1..cfg.EVAL_TOP_K
             Eval->>Eval: is_relevant(chunk_text, keywords)
             Note over Eval: keyword substring match (case-insensitive)
         end
         Note over Eval: record rank of first relevant hit (or miss)
     end
 
-    Note over Eval: Recall@10  = hits_in_top10 / total
-    Note over Eval: HitRate@1  = hits_at_rank1 / total
-    Note over Eval: MRR        = mean(1/rank) over all hits
+    Note over Eval: Recall@cfg.EVAL_TOP_K = hits_in_top_k / total
+    Note over Eval: HitRate@1            = hits_at_rank1 / total
+    Note over Eval: MRR                  = mean(1/rank) over all hits
 
-    Eval-->>Script: {total_queries, Recall@10, HitRate@1, MRR}
+    Eval-->>Script: {total_queries, Recall@cfg.EVAL_TOP_K, HitRate@1, MRR}
     Script->>Script: print(metrics)

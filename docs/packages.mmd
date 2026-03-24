@@ -1,30 +1,41 @@
 classDiagram
-  class prod {
+  class run_indexer {
   }
-  class main_pipeline {
+  class run_pipeline {
   }
-  class main_ret_eval {
+  class run_eval {
   }
-  class qr {
+  class config {
+  }
+  class pipeline {
+  }
+  class retriever {
+  }
+  class reranker {
+  }
+  class service_predictor {
+  }
+  class evaluator {
+  }
+  class indexer {
   }
   class query_writer {
   }
-  class rag_pipeline {
-  }
-  class rag_reranker {
-  }
-  class rag_ret_eval {
-  }
-  class rag_retriever {
-  }
-  class rag_service_predictor {
-  }
-  class test_py {
-  }
-  main_pipeline --> rag_pipeline
-  main_ret_eval --> rag_pipeline
-  main_ret_eval --> rag_ret_eval
-  rag_pipeline --> query_writer
-  rag_pipeline --> rag_reranker
-  rag_pipeline --> rag_retriever
-  rag_pipeline --> rag_service_predictor
+  run_indexer --> indexer
+  run_indexer --> config
+  run_pipeline --> pipeline
+  run_pipeline --> config
+  run_eval --> pipeline
+  run_eval --> evaluator
+  run_eval --> config
+  pipeline --> query_writer
+  pipeline --> reranker
+  pipeline --> retriever
+  pipeline --> service_predictor
+  pipeline --> config
+  indexer --> config
+  retriever --> config
+  reranker --> config
+  service_predictor --> config
+  evaluator --> config
+  query_writer --> config
