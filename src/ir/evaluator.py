@@ -37,15 +37,17 @@ class RetrievalEvaluator:
     def evaluate(self, eval_file, top_k=cfg.EVAL_TOP_K):
         eval_queries = self.load_queries(eval_file)
 
+        per_query = []
         hits = 0
         recall_hits = 0
         reciprocal_sum = 0
-
         total = len(eval_queries)
+
         for item in eval_queries:
             query = item["query"]
             keywords = item["keywords"]
             results = self.pipeline.query(query, top_k=top_k)["results"]
+
             rank = None
             for i, r in enumerate(results):
                 if self.is_relevant(r["text"], keywords):
@@ -56,16 +58,20 @@ class RetrievalEvaluator:
                 recall_hits += 1
                 if rank == 1:
                     hits += 1
-
                 reciprocal_sum += 1 / rank
 
-        recall = recall_hits / total
-        hit_rate = hits / total
-        mrr = reciprocal_sum / total
+            per_query.append({
+                "query": query,
+                "rank": rank,
+                "relevant": rank is not None,
+                "reciprocal_rank": round(1 / rank, 3) if rank else 0.0,
+            })
 
-        return {
+        summary = {
             "total_queries": total,
-            f"Recall@{top_k}": round(recall, 3),
-            "HitRate@1": round(hit_rate, 3),
-            "MRR": round(mrr, 3),
+            f"Recall@{top_k}": round(recall_hits / total, 3),
+            "HitRate@1": round(hits / total, 3),
+            "MRR": round(reciprocal_sum / total, 3),
         }
+
+        return {"summary": summary, "per_query": per_query}

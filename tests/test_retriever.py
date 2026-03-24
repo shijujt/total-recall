@@ -3,10 +3,13 @@ from unittest.mock import MagicMock
 from ir.retriever import HybridRetriever
 
 
-def make_collection(docs):
+def make_collection(docs, service="lambda"):
     """Return a mock Chroma collection pre-loaded with the given documents."""
     collection = MagicMock()
-    collection.get.return_value = {"documents": docs}
+    collection.get.return_value = {
+        "documents": docs,
+        "metadatas": [{"service": service} for _ in docs],
+    }
     return collection
 
 

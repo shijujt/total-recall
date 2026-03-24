@@ -12,50 +12,72 @@ class HybridRetriever:
         self.bm25 = None
         self.documents = []
         self.tokenized_docs = []
+        self.doc_services = []
 
     def _tokenize(self, text):
         return re.findall(r"\w+", text.lower())
 
     def build_bm25_index(self):
-        results = self.collection.get(include=["documents"])
+        results = self.collection.get(include=["documents", "metadatas"])
         self.documents = results["documents"]
+        self.doc_services = [m.get("service") for m in results["metadatas"]]
         self.tokenized_docs = [self._tokenize(doc) for doc in self.documents]
         self.bm25 = BM25Okapi(self.tokenized_docs)
         self.doc_index = {doc: i for i, doc in enumerate(self.documents)}
 
-    def hybrid_search(self, query: str, alpha: float = cfg.RETRIEVER_ALPHA, top_k: int = cfg.RETRIEVER_HYBRID_TOP_K, service_filter=None):
+    def hybrid_search(
+        self,
+        query: str,
+        alpha: float = cfg.RETRIEVER_ALPHA,
+        top_k: int = cfg.RETRIEVER_HYBRID_TOP_K,
+        service_filter=None,
+    ):
         vector_top_k = cfg.RETRIEVER_VECTOR_TOP_K
         bm25_top_k = cfg.RETRIEVER_BM25_TOP_K
 
+        # Normalise service_filter to a list or None
+        if isinstance(service_filter, str):
+            services = [service_filter]
+        elif service_filter:
+            services = list(service_filter)
+        else:
+            services = None
+
         # --- Vector search ---
+        where = {"service": {"$in": services}} if services else None
         vector_results = self.collection.query(
             query_texts=[query],
             n_results=vector_top_k,
-            where={"service": service_filter},
+            where=where,
         )
-
         vector_docs = vector_results["documents"][0]
         vector_scores = [1 - d for d in vector_results["distances"][0]]
 
-        # --- BM25 search ---
+        # --- BM25 search with service mask + normalisation ---
         tokenized_query = self._tokenize(query)
-        bm25_scores_full = self.bm25.get_scores(tokenized_query)
+        bm25_scores = self.bm25.get_scores(tokenized_query)
 
-        bm25_top_indices = np.argsort(bm25_scores_full)[::-1][:bm25_top_k]
+        if services:
+            mask = np.array([1.0 if s in services else 0.0 for s in self.doc_services])
+            bm25_scores = bm25_scores * mask
+
+        max_bm25 = bm25_scores.max()
+        bm25_scores_norm = bm25_scores / max_bm25 if max_bm25 > 0 else bm25_scores
+
+        bm25_top_indices = np.argsort(bm25_scores_norm)[::-1][:bm25_top_k]
         bm25_docs = [self.documents[i] for i in bm25_top_indices]
 
         # --- Union ---
         candidate_docs = list(set(vector_docs + bm25_docs))
 
         hybrid_results = []
-
         for doc in candidate_docs:
             idx = self.doc_index[doc]
             vec_score = 0
             if doc in vector_docs:
                 vec_score = vector_scores[vector_docs.index(doc)]
 
-            bm_score = bm25_scores_full[idx]
+            bm_score = float(bm25_scores_norm[idx])
             hybrid_score = alpha * vec_score + (1 - alpha) * bm_score
 
             hybrid_results.append(

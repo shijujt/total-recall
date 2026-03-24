@@ -18,7 +18,7 @@ class RAGPipeline:
 
     def query(self, query: str, top_k: int = cfg.RERANKER_TOP_K) -> dict:
         services = self.service_predictor.predict(query, top_k=cfg.SERVICE_PREDICTOR_TOP_K)
-        best_service = services[0][0]
+        service_names = [s for s, _ in services]
 
         rewritten_queries = self.rewriter.rewrite(query)
 
@@ -28,7 +28,7 @@ class RAGPipeline:
                 q,
                 alpha=cfg.RETRIEVER_ALPHA,
                 top_k=cfg.RETRIEVER_HYBRID_TOP_K,
-                service_filter=best_service,
+                service_filter=service_names,
             )
             all_candidates.extend(results)
 
@@ -39,4 +39,4 @@ class RAGPipeline:
         candidates = list(unique.values())
         reranked = self.reranker.rerank(query, candidates, top_k=top_k)
 
-        return {"service": best_service, "results": reranked}
+        return {"service": service_names[0], "results": reranked}

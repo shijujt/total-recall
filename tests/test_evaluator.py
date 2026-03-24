@@ -108,10 +108,11 @@ class TestEvaluateMetrics:
             ]
         )
         ev = RetrievalEvaluator(pipeline)
-        metrics = ev.evaluate(path, top_k=5)
-        assert metrics["Recall@5"] == 1.0
-        assert metrics["HitRate@1"] == 1.0
-        assert metrics["MRR"] == 1.0
+        output = ev.evaluate(path, top_k=5)
+        summary = output["summary"]
+        assert summary["Recall@5"] == 1.0
+        assert summary["HitRate@1"] == 1.0
+        assert summary["MRR"] == 1.0
 
     def test_zero_recall(self, tmp_path):
         records = [make_query_record(keywords=["missing"])] * 2
@@ -123,10 +124,11 @@ class TestEvaluateMetrics:
             ]
         )
         ev = RetrievalEvaluator(pipeline)
-        metrics = ev.evaluate(path, top_k=5)
-        assert metrics["Recall@5"] == 0.0
-        assert metrics["HitRate@1"] == 0.0
-        assert metrics["MRR"] == 0.0
+        output = ev.evaluate(path, top_k=5)
+        summary = output["summary"]
+        assert summary["Recall@5"] == 0.0
+        assert summary["HitRate@1"] == 0.0
+        assert summary["MRR"] == 0.0
 
     def test_mrr_hit_at_rank_2(self, tmp_path):
         records = [make_query_record(keywords=["found"])]
@@ -137,10 +139,11 @@ class TestEvaluateMetrics:
             ]
         )
         ev = RetrievalEvaluator(pipeline)
-        metrics = ev.evaluate(path, top_k=5)
-        assert metrics["MRR"] == 0.5
-        assert metrics["HitRate@1"] == 0.0
-        assert metrics["Recall@5"] == 1.0
+        output = ev.evaluate(path, top_k=5)
+        summary = output["summary"]
+        assert summary["MRR"] == 0.5
+        assert summary["HitRate@1"] == 0.0
+        assert summary["Recall@5"] == 1.0
 
     def test_mrr_hit_at_rank_5(self, tmp_path):
         records = [make_query_record(keywords=["found"])]
@@ -150,8 +153,8 @@ class TestEvaluateMetrics:
             [no_match + [make_result("yes found here")]]
         )
         ev = RetrievalEvaluator(pipeline)
-        metrics = ev.evaluate(path, top_k=5)
-        assert metrics["MRR"] == round(1 / 5, 3)
+        output = ev.evaluate(path, top_k=5)
+        assert output["summary"]["MRR"] == round(1 / 5, 3)
 
     def test_mixed_queries(self, tmp_path):
         records = [
@@ -166,18 +169,19 @@ class TestEvaluateMetrics:
             ]
         )
         ev = RetrievalEvaluator(pipeline)
-        metrics = ev.evaluate(path, top_k=5)
-        assert metrics["Recall@5"] == 0.5
-        assert metrics["HitRate@1"] == 0.5
-        assert metrics["MRR"] == 0.5
+        output = ev.evaluate(path, top_k=5)
+        summary = output["summary"]
+        assert summary["Recall@5"] == 0.5
+        assert summary["HitRate@1"] == 0.5
+        assert summary["MRR"] == 0.5
 
     def test_total_queries_key_present(self, tmp_path):
         records = [make_query_record(keywords=["x"])] * 3
         path = write_eval_file(tmp_path, records)
         pipeline = make_pipeline([[make_result("no")] for _ in range(3)])
         ev = RetrievalEvaluator(pipeline)
-        metrics = ev.evaluate(path, top_k=5)
-        assert metrics["total_queries"] == 3
+        output = ev.evaluate(path, top_k=5)
+        assert output["summary"]["total_queries"] == 3
 
     def test_metrics_rounded_to_three_decimals(self, tmp_path):
         # 1 hit out of 3 queries at rank 1: MRR = 1/3 ≈ 0.333
@@ -191,5 +195,39 @@ class TestEvaluateMetrics:
             ]
         )
         ev = RetrievalEvaluator(pipeline)
-        metrics = ev.evaluate(path, top_k=5)
-        assert metrics["MRR"] == round(1 / 3, 3)
+        output = ev.evaluate(path, top_k=5)
+        assert output["summary"]["MRR"] == round(1 / 3, 3)
+
+    def test_per_query_report_length(self, tmp_path):
+        records = [make_query_record(keywords=["hit"])] * 3
+        path = write_eval_file(tmp_path, records)
+        pipeline = make_pipeline([[make_result("has hit")] for _ in range(3)])
+        ev = RetrievalEvaluator(pipeline)
+        output = ev.evaluate(path, top_k=5)
+        assert len(output["per_query"]) == 3
+
+    def test_per_query_relevant_flag(self, tmp_path):
+        records = [
+            make_query_record(keywords=["hit"]),
+            make_query_record(keywords=["missing"]),
+        ]
+        path = write_eval_file(tmp_path, records)
+        pipeline = make_pipeline([
+            [make_result("has hit")],
+            [make_result("no match")],
+        ])
+        ev = RetrievalEvaluator(pipeline)
+        output = ev.evaluate(path, top_k=5)
+        rows = output["per_query"]
+        assert rows[0]["relevant"] is True
+        assert rows[1]["relevant"] is False
+
+    def test_per_query_rank_and_reciprocal(self, tmp_path):
+        records = [make_query_record(keywords=["found"])]
+        path = write_eval_file(tmp_path, records)
+        pipeline = make_pipeline([[make_result("no"), make_result("found here")]])
+        ev = RetrievalEvaluator(pipeline)
+        output = ev.evaluate(path, top_k=5)
+        row = output["per_query"][0]
+        assert row["rank"] == 2
+        assert row["reciprocal_rank"] == 0.5

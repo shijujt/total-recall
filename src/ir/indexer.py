@@ -77,7 +77,7 @@ class MarkdownSectionParser:
                 }
             )
 
-        return chunks
+        return [sc for chunk in chunks for sc in self._split_long_chunk(chunk)]
 
     # -------------------------------
     # FALLBACK SPLITTING
@@ -128,7 +128,7 @@ class MarkdownSectionParser:
                 }
             )
 
-        return chunks
+        return [sc for chunk in chunks for sc in self._split_long_chunk(chunk)]
 
     def _split_by_token_length(self, filepath, content):
         words = content.split()
@@ -162,6 +162,27 @@ class MarkdownSectionParser:
             )
 
         return chunks
+
+    def _split_long_chunk(self, chunk: dict) -> list:
+        words = chunk["text"].split()
+        if len(words) <= self.max_tokens:
+            return [chunk]
+
+        sub_chunks = []
+        step = max(1, self.max_tokens - cfg.PARSER_CHUNK_OVERLAP)
+        base_id = chunk["metadata"]["chunk_id"]
+
+        for i, start in enumerate(range(0, len(words), step)):
+            window = words[start : start + self.max_tokens]
+            if not window:
+                break
+            sub = dict(chunk)
+            sub["text"] = " ".join(window)
+            sub["metadata"] = dict(chunk["metadata"])
+            sub["metadata"]["chunk_id"] = f"{base_id}_w{i}"
+            sub_chunks.append(sub)
+
+        return sub_chunks
 
     def _format_chunk(self, filepath, section_title, section_text):
         return f"""Service: AWS {self.service_name.capitalize()}
