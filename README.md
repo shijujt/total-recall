@@ -187,7 +187,12 @@ ir/
 │   ├── rag_service_predictor.py  # AWS service classification
 │   └── qr/
 │       └── query_writer.py       # Query rewriting (Llama, OpenAI)
-├── docs/                         # AWS documentation (markdown)
+├── docs/
+│   ├── classes.mmd               # Class diagram
+│   ├── packages.mmd              # Module dependency diagram
+│   ├── seq_indexer.mmd           # Sequence diagram: main_indexer
+│   ├── seq_pipeline.mmd          # Sequence diagram: main_pipeline
+│   └── seq_eval.mmd              # Sequence diagram: main_ret_eval
 ├── chroma_db/                    # Persistent vector store (auto-created)
 ├── eval_queries.jsonl            # Evaluation queries (manual)
 ├── eval_queries_ag.jsonl         # Evaluation queries (Llama-generated, 500)
