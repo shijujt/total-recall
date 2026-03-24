@@ -1,0 +1,50 @@
+sequenceDiagram
+    participant Script as main_pipeline
+    participant Chroma as ChromaDB
+    participant Pipeline as RAGPipeline
+    participant SP as ServicePredictor
+    participant QR as LlamaQueryRewriter
+    participant Ollama as Ollama API
+    participant HR as HybridRetriever
+    participant RR as Reranker
+
+    Script->>Chroma: PersistentClient() + get_collection("aws_docs")
+    Script->>Pipeline: __init__(collection)
+    Pipeline->>SP: __init__()
+    Pipeline->>QR: __init__(n_queries=2)
+    Pipeline->>RR: __init__() — loads CrossEncoder model
+    Pipeline->>HR: __init__(collection)
+    Pipeline->>HR: build_bm25_index()
+    HR->>Chroma: collection.get(include=["documents"])
+    Chroma-->>HR: all documents
+    HR-->>Pipeline: BM25 index ready
+
+    Script->>Pipeline: query(q)
+
+    Pipeline->>SP: predict(query, top_k=2)
+    Note over SP: cosine similarity vs service embeddings
+    SP-->>Pipeline: [(service, score), ...]
+
+    Pipeline->>QR: rewrite(query)
+    QR->>Ollama: POST /api/generate — llama3
+    Ollama-->>QR: 2 alternative query formulations
+    QR-->>Pipeline: rewritten_queries[]
+
+    loop for each rewritten query
+        Pipeline->>HR: hybrid_search(q, alpha=0.5, top_k=20, service_filter)
+        HR->>Chroma: collection.query(query_texts, where={service})
+        Chroma-->>HR: vector search results + distances
+        Note over HR: BM25 scores computed in-memory
+        Note over HR: hybrid = 0.5 * vec_score + 0.5 * bm25_score
+        HR-->>Pipeline: scored candidates[]
+    end
+
+    Note over Pipeline: union + deduplicate by text
+
+    Pipeline->>RR: rerank(original_query, candidates, top_k=5)
+    Note over RR: CrossEncoder scores each (query, doc) pair
+    RR-->>Pipeline: top-5 results with rerank_score
+
+    Pipeline-->>Script: results[{text, vector_score, bm25_score, hybrid_score, rerank_score}]
+    Script->>Script: confidence_label(scores[0], scores[1])
+    Script->>Script: print query + confidence
